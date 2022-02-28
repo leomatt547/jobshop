@@ -1,15 +1,16 @@
-all: main
+all: jobshop
 
-main: main.o simlib.o
-	gcc -o main main.o simlib.o -lm
+jobshop: jobshop.o simlib.o
+	gcc -o jobshop jobshop.o simlib.o -lm
+	./jobshop
 
 clean:
-	rm main.o
+	rm jobshop.o
 	rm simlib.o
-	rm main
+	rm jobshop
 
-main.o: main.c
-	gcc -c main.c -o main.o -I.
+jobshop.o: jobshop.c
+	gcc -c jobshop.c -o jobshop.o -I.
 
 simlib.o: simlib.c
 	gcc -c simlib.c -o simlib.o -I.
