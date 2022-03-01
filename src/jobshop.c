@@ -152,6 +152,7 @@ void depart(int identifier) /* Event function for departure of a job from a part
 
   if (task < num_tasks[job_type])
   {
+    fprintf(logfile, "[%f] Task-%d dari Job-%d sudah selesai dari jobshop-%d, saatnya lanjut ke Task-%d\n", sim_time, task, job_type, identifier - 3, task + 1);
     ++task;
     arrive(identifier);
   }
