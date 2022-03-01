@@ -23,12 +23,12 @@
 
 /* Declare non-simlib global variables. */
 
-int num_stations[3], num_job_types, i, j, num_machines[MAX_NUM_STATIONS + 1],
+int num_stations, num_job_types, i, j, num_machines[MAX_NUM_STATIONS + 1],
     num_tasks[MAX_NUM_JOB_TYPES + 1],
     route[MAX_NUM_JOB_TYPES + 1][MAX_NUM_STATIONS + 1], num_machines_busy[3][MAX_NUM_STATIONS + 1], job_type, task;
 double mean_interarrival, length_simulation, prob_distrib_job_type[26],
     mean_service[MAX_NUM_JOB_TYPES + 1][MAX_NUM_STATIONS + 1];
-FILE *infile, *outfile;
+FILE *infile, *outfile, *logfile;
 
 void arrive(int identifier) /* Function to serve as both an arrival event of a job
             to the system, as well as the non-event of a job's
@@ -74,7 +74,7 @@ void arrive(int identifier) /* Function to serve as both an arrival event of a j
     transfer[2] = job_type;
     transfer[3] = task;
     list_file(LAST, station);
-    fprintf(outfile, "[%f] Saat memproses task-%d, job %d, Mesin sibuk pada jobshop-%d\n", sim_time, task, job_type, identifier - 3);
+    // fprintf(logfile, "[%f] Saat memproses task-%d, job %d, Mesin sibuk pada jobshop-%d\n", sim_time, task, job_type, identifier - 3);
   }
 
   else
@@ -83,8 +83,8 @@ void arrive(int identifier) /* Function to serve as both an arrival event of a j
     /* A machine in this station is idle, so start service on the arriving
        job (which has a delay of zero). */
 
-    sampst(0.0, station);                                 /* For station. */
-    sampst(0.0, num_stations[identifier - 4] + job_type); /* For job type. */
+    sampst(0.0, station);                                    /* For station. */
+    sampst(0.0, (identifier - 4) * num_stations + job_type); /* For job type. */
     ++num_machines_busy[identifier - 4][station];
     timest((double)num_machines_busy[identifier - 4][station], station);
 
@@ -125,7 +125,7 @@ void depart(int identifier) /* Event function for departure of a job from a part
 
     /* The queue is nonempty, so start service on first job in queue. */
 
-    fprintf(outfile, "[%f] Task-%d job-%d dimulai pada jobshop-%d\n", sim_time, task, job_type, identifier - 3);
+    fprintf(logfile, "[%f] Task-%d job-%d dimulai pada jobshop-%d\n", sim_time, task, job_type, identifier - 3);
     list_remove(FIRST, station);
 
     /* Tally this delay for this station. */
@@ -136,7 +136,7 @@ void depart(int identifier) /* Event function for departure of a job from a part
 
     job_type_queue = transfer[2];
     task_queue = transfer[3];
-    sampst(sim_time - transfer[1], num_stations[identifier - 4] + job_type_queue);
+    sampst(sim_time - transfer[1], (identifier - 4) * num_stations + job_type_queue);
 
     /* Schedule end of service for this job at this station.  Note defining
        attributes beyond the first two for the event record before invoking
@@ -160,12 +160,12 @@ void depart(int identifier) /* Event function for departure of a job from a part
     if (identifier % 3 != 0)
     {
       /*lempar ke job shop 3 sebagai job baru*/
-      fprintf(outfile, "[%f] Job %d sudah selesai dari jobshop-%d, saatnya masuk ke jobshop-3\n", sim_time, job_type, identifier - 3);
+      fprintf(logfile, "[%f] Job %d sudah selesai dari jobshop-%d, saatnya masuk ke jobshop-3\n", sim_time, job_type, identifier - 3);
       arrive(3);
     }
     else
     {
-      fprintf(outfile, "[%f] Job %d sudah selesai dari jobshop-%d\n", sim_time, job_type, identifier - 3);
+      fprintf(logfile, "[%f] Job %d sudah selesai dari jobshop-%d\n", sim_time, job_type, identifier - 3);
     }
   }
 }
@@ -175,39 +175,32 @@ void report(void) /* Report generator function. */
   int i;
   double overall_avg_job_tot_delay, avg_job_tot_delay, sum_probs;
 
-  // for (int jobshop = 0; jobshop < 3; jobshop++)
+  for (int jobshop = 0; jobshop < 3; jobshop++)
+  {
+    fprintf(outfile, "\n\nData Rata-Rata pada Jobshop-%d:\n", (jobshop + 1));
+    /* Compute the average total delay in queue for each job type and the
+      overall average job total delay. */
+
+    fprintf(outfile, "\nJob type     Average total delay in queue");
+    overall_avg_job_tot_delay = 0.0;
+    sum_probs = 0.0;
+    for (i = 1; i <= num_job_types; ++i)
+    {
+      avg_job_tot_delay = sampst(0.0, -(jobshop * num_stations + i)) * num_tasks[i];
+      fprintf(outfile, "\n\n%4d%27.3f", i, avg_job_tot_delay);
+      overall_avg_job_tot_delay += (prob_distrib_job_type[i] - sum_probs) * avg_job_tot_delay;
+      sum_probs = prob_distrib_job_type[i];
+    }
+    fprintf(outfile, "\n\nOverall average job total delay =%10.3f\n", overall_avg_job_tot_delay);
+
+    /* Compute the average number in queue, the average utilization, and the
+      average delay in queue for each station. */
+  }
+  // fprintf(outfile, "\n\n\n Work      Average number      Average       Average delay");
+  // fprintf(outfile, "\nstation       in queue       utilization        in queue");
+  // for (j = (jobshop * num_stations); j < (jobshop * num_stations) + num_stations; ++j)
   // {
-  //   fprintf(outfile, "Data Rata-Rata pada Jobshop-%d:\n", jobshop);
-  //   /* Compute the average total delay in queue for each job type and the
-  //     overall average job total delay. */
-
-  //   // fprintf(outfile, "\n(a) Average and maximum number in each job-shop\n");
-  //   // fprintf(outfile, "\n    job-shop 1, job-shop 2 and job-shop 3:\n");
-  //   // out_filest(outfile, LIST_job - shop_1, LIST_job - shop_3);
-  //   // fprintf(outfile, "\n(b) Average and maximum delay in each job-shop\n");
-  //   // fprintf(outfile, "\n    job-shop 1, job-shop 2 and job-shop 3:\n");
-  //   // out_sampst(outfile, SAMPST_DELAYS_1, SAMPST_DELAYS_3);
-  //   fprintf(outfile, "\n\n\n\nJob type     Average total delay in queue");
-  //   overall_avg_job_tot_delay = 0.0;
-  //   sum_probs = 0.0;
-  //   for (i = 1; i <= num_job_types; ++i)
-  //   {
-  //     avg_job_tot_delay = sampst(0.0, -(num_stations[jobshop] + i)) * num_tasks[i];
-  //     fprintf(outfile, "\n\n%4d%27.3f", i, avg_job_tot_delay);
-  //     overall_avg_job_tot_delay += (prob_distrib_job_type[i] - sum_probs) * avg_job_tot_delay;
-  //     sum_probs = prob_distrib_job_type[i];
-  //   }
-  //   fprintf(outfile, "\n\nOverall average job total delay =%10.3f\n", overall_avg_job_tot_delay);
-
-  //   /* Compute the average number in queue, the average utilization, and the
-  //     average delay in queue for each station. */
-
-  //   fprintf(outfile, "\n\n\n Work      Average number      Average       Average delay");
-  //   fprintf(outfile, "\nstation       in queue       utilization        in queue");
-  //   for (j = 1; j <= num_stations[jobshop]; ++j)
-  //   {
-  //     fprintf(outfile, "\n\n%4d%17.3f%17.3f%17.3f", j, filest(j), timest(0.0, -j) / num_machines[j], sampst(0.0, -j));
-  //   }
+  //   fprintf(outfile, "\n\n%4d%17.3f%17.3f%17.3f", j, filest(j), timest(0.0, -j) / num_machines[j], sampst(0.0, -j));
   // }
 }
 
@@ -215,13 +208,14 @@ int main() /* Main function. */
 {
   /* Open input and output files. */
 
-  infile = fopen("jobshop.in", "r");
-  outfile = fopen("jobshop.out", "w");
+  infile = fopen("res/jobshop.in", "r");
+  outfile = fopen("res/jobshop.out", "w");
+  logfile = fopen("res/log.txt", "w");
 
   /* Read input parameters. */
 
-  fscanf(infile, "%d %d %lg %lg", &num_stations[0], &num_job_types, &mean_interarrival, &length_simulation);
-  for (j = 1; j <= num_stations[0]; ++j)
+  fscanf(infile, "%d %d %lg %lg", &num_stations, &num_job_types, &mean_interarrival, &length_simulation);
+  for (j = 1; j <= num_stations; ++j)
     fscanf(infile, "%d", &num_machines[j]);
   for (i = 1; i <= num_job_types; ++i)
     fscanf(infile, "%d", &num_tasks[i]);
@@ -238,9 +232,9 @@ int main() /* Main function. */
   /* Write report heading and input parameters. */
 
   fprintf(outfile, "Job-shop model\n\n");
-  fprintf(outfile, "Number of work stations%21d\n\n", num_stations[0]);
+  fprintf(outfile, "Number of work stations%21d\n\n", num_stations);
   fprintf(outfile, "Number of machines in each station     ");
-  for (j = 1; j <= num_stations[0]; ++j)
+  for (j = 1; j <= num_stations; ++j)
     fprintf(outfile, "%5d", num_machines[j]);
   fprintf(outfile, "\n\nNumber of job types%25d\n\n", num_job_types);
   fprintf(outfile, "Number of tasks for each job type      ");
@@ -269,10 +263,7 @@ int main() /* Main function. */
   fprintf(outfile, "\n");
 
   /* Initialize all machines in all stations to the idle state. */
-
-  num_stations[1] = num_stations[0];
-  num_stations[2] = num_stations[0];
-  for (j = 1; j <= num_stations[0]; ++j)
+  for (j = 1; j <= num_stations; ++j)
   {
     num_machines_busy[0][j] = 0;
     num_machines_busy[1][j] = 0;
@@ -342,6 +333,7 @@ int main() /* Main function. */
 
   fclose(infile);
   fclose(outfile);
+  fclose(logfile);
 
   return 0;
 }
