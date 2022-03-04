@@ -53,6 +53,8 @@ void arrive(int identifier) /* Function to serve as both an arrival event of a j
     task = 1;
     identifier += 3;
   }
+  fprintf(logfile, "[%f] Task-%d job-%d sedang menuju jobshop-%d\n", sim_time, task, job_type, identifier - 3);
+
 
   /* Determine the station from the route matrix. */
 
@@ -74,6 +76,7 @@ void arrive(int identifier) /* Function to serve as both an arrival event of a j
     transfer[2] = job_type;
     transfer[3] = task;
     list_file(LAST, station);
+    // printf("Station %d assigned on id %d\n", station, identifier);
     // fprintf(logfile, "[%f] Saat memproses task-%d, job %d, Mesin sibuk pada jobshop-%d\n", sim_time, task, job_type, identifier - 3);
   }
 
@@ -94,6 +97,7 @@ void arrive(int identifier) /* Function to serve as both an arrival event of a j
     transfer[3] = job_type;
     transfer[4] = task;
     event_schedule(sim_time + erlang(2, mean_service[job_type][task], STREAM_SERVICE), identifier);
+    // printf("%f assigned new task %d", identifier);
   }
 }
 

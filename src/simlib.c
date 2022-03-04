@@ -366,6 +366,7 @@ event_schedule (double time_of_event, int type_of_event)
   transfer[EVENT_TIME] = time_of_event;
   transfer[EVENT_TYPE] = type_of_event;
   list_file (INCREASING, LIST_EVENT);
+  printf("%f Scheduled %f %d\n", sim_time, time_of_event, type_of_event);
 }
 
 int
